@@ -8,6 +8,7 @@ import { usePDFEditor } from "@/hooks/usePDFEditor";
 import Toolbar from "./Toolbar";
 import PageThumbnails from "./PageThumbnails";
 import AnnotationCanvas from "./AnnotationCanvas";
+import TextEditLayer from "./TextEditLayer";
 
 interface PDFEditorProps {
   pdfData: ArrayBuffer;
@@ -97,7 +98,7 @@ export default function PDFEditor({ pdfData, fileName, onReset }: PDFEditorProps
     if (!pdf) return;
     setExporting(true);
     try {
-      const bytes = await exportPDF(pdfData, editor.annotations, editor.scale);
+      const bytes = await exportPDF(pdfData, editor.annotations, editor.scale, editor.textEdits);
       const blob = new Blob([bytes as unknown as BlobPart], { type: "application/pdf" });
       const url = URL.createObjectURL(blob);
       const a = document.createElement("a");
@@ -111,7 +112,7 @@ export default function PDFEditor({ pdfData, fileName, onReset }: PDFEditorProps
     } finally {
       setExporting(false);
     }
-  }, [pdf, pdfData, editor.annotations, editor.scale, fileName]);
+  }, [pdf, pdfData, editor.annotations, editor.scale, editor.textEdits, fileName]);
 
   const handleImageUpload = useCallback(() => {
     imageInputRef.current?.click();
@@ -226,6 +227,18 @@ export default function PDFEditor({ pdfData, fileName, onReset }: PDFEditorProps
         <div className="flex-1 overflow-auto bg-[#1a1a1a] flex items-start justify-center p-8">
           <div className="pdf-page-container" style={{ width: pageSize.width, height: pageSize.height }}>
             <canvas ref={pdfCanvasRef} style={{ width: pageSize.width, height: pageSize.height }} />
+            {pageSize.width > 0 && pdf && (
+              <TextEditLayer
+                pdf={pdf}
+                pageNum={editor.currentPage}
+                scale={editor.scale}
+                width={pageSize.width}
+                height={pageSize.height}
+                active={editor.tool === "editText"}
+                textEdits={editor.textEdits}
+                onTextEdit={editor.setTextEdit}
+              />
+            )}
             {pageSize.width > 0 && (
               <AnnotationCanvas
                 width={pageSize.width}

@@ -1,5 +1,5 @@
-import { PDFDocument, rgb, StandardFonts, degrees } from "pdf-lib";
-import type { Annotation } from "@/hooks/usePDFEditor";
+import { PDFDocument, rgb, StandardFonts } from "pdf-lib";
+import type { Annotation, TextEdit } from "@/hooks/usePDFEditor";
 
 function hexToRgb(hex: string) {
   const r = parseInt(hex.slice(1, 3), 16) / 255;
@@ -11,11 +11,39 @@ function hexToRgb(hex: string) {
 export async function exportPDF(
   originalData: ArrayBuffer,
   annotations: Map<number, Annotation[]>,
-  scale: number
+  scale: number,
+  textEdits?: Map<string, TextEdit>
 ): Promise<Uint8Array> {
   const pdfDoc = await PDFDocument.load(new Uint8Array(originalData));
   const font = await pdfDoc.embedFont(StandardFonts.Helvetica);
   const pages = pdfDoc.getPages();
+
+  // Apply text edits: white-out original text area, draw new text
+  if (textEdits && textEdits.size > 0) {
+    for (const [, edit] of Array.from(textEdits.entries())) {
+      const page = pages[edit.pageNum - 1];
+      if (!page) continue;
+
+      const padding = 2;
+      // White-out the original text area
+      page.drawRectangle({
+        x: edit.pdfX - padding,
+        y: edit.pdfY - padding,
+        width: edit.pdfWidth + padding * 2,
+        height: edit.pdfHeight + padding * 2,
+        color: rgb(1, 1, 1),
+      });
+
+      // Draw the replacement text
+      page.drawText(edit.newText, {
+        x: edit.pdfX,
+        y: edit.pdfY,
+        size: edit.fontSize,
+        font,
+        color: rgb(0, 0, 0),
+      });
+    }
+  }
 
   for (const [pageNum, pageAnnotations] of Array.from(annotations.entries())) {
     const page = pages[pageNum - 1];

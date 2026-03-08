@@ -24,7 +24,8 @@ interface ToolbarProps {
 
 const tools: { id: ToolType; label: string; icon: string }[] = [
   { id: "select", label: "Select", icon: "↖" },
-  { id: "text", label: "Text", icon: "T" },
+  { id: "editText", label: "Edit Text", icon: "I\u0332" },
+  { id: "text", label: "Add Text", icon: "T" },
   { id: "draw", label: "Draw", icon: "✎" },
   { id: "highlight", label: "Highlight", icon: "█" },
   { id: "rectangle", label: "Rectangle", icon: "▭" },

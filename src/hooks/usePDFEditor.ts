@@ -4,12 +4,26 @@ import { useState, useCallback, useRef } from "react";
 
 export type ToolType =
   | "select"
+  | "editText"
   | "text"
   | "draw"
   | "highlight"
   | "rectangle"
   | "image"
   | "erase";
+
+export interface TextEdit {
+  itemId: string;
+  pageNum: number;
+  originalText: string;
+  newText: string;
+  // PDF coordinates (unscaled, bottom-left origin)
+  pdfX: number;
+  pdfY: number;
+  pdfWidth: number;
+  pdfHeight: number;
+  fontSize: number;
+}
 
 export interface Point {
   x: number;
@@ -49,6 +63,7 @@ export function usePDFEditor() {
   );
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [undoStack, setUndoStack] = useState<Map<number, Annotation[]>[]>([]);
+  const [textEdits, setTextEdits] = useState<Map<string, TextEdit>>(new Map());
 
   const getPageAnnotations = useCallback(
     (page: number): Annotation[] => {
@@ -104,6 +119,29 @@ export function usePDFEditor() {
     [pushUndo]
   );
 
+  const setTextEdit = useCallback(
+    (edit: TextEdit) => {
+      setTextEdits((prev) => {
+        const next = new Map(prev);
+        // If text was reverted to original, remove the edit
+        if (edit.newText === edit.originalText) {
+          next.delete(edit.itemId);
+        } else {
+          next.set(edit.itemId, edit);
+        }
+        return next;
+      });
+    },
+    []
+  );
+
+  const getTextEdit = useCallback(
+    (itemId: string): TextEdit | undefined => {
+      return textEdits.get(itemId);
+    },
+    [textEdits]
+  );
+
   const undo = useCallback(() => {
     setUndoStack((prev) => {
       if (prev.length === 0) return prev;
@@ -136,5 +174,8 @@ export function usePDFEditor() {
     selectedId,
     setSelectedId,
     undo,
+    textEdits,
+    setTextEdit,
+    getTextEdit,
   };
 }

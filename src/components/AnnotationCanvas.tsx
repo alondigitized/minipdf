@@ -284,7 +284,14 @@ export default function AnnotationCanvas({
   };
 
   return (
-    <div className="absolute inset-0" style={{ width, height }}>
+    <div
+      className="absolute inset-0"
+      style={{
+        width,
+        height,
+        pointerEvents: tool === "editText" ? "none" : "auto",
+      }}
+    >
       <canvas
         ref={canvasRef}
         width={width}
@@ -298,7 +305,9 @@ export default function AnnotationCanvas({
               ? "default"
               : tool === "erase"
                 ? "pointer"
-                : "crosshair",
+                : tool === "editText"
+                  ? "text"
+                  : "crosshair",
         }}
         onMouseDown={handleMouseDown}
         onMouseMove={handleMouseMove}

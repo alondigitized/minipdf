@@ -9,6 +9,71 @@ function ensureWorker() {
   }
 }
 
+export interface ExtractedTextItem {
+  id: string;
+  str: string;
+  // Position in PDF coordinates (bottom-left origin, unscaled)
+  pdfX: number;
+  pdfY: number;
+  pdfWidth: number;
+  pdfHeight: number;
+  fontSize: number;
+  fontFamily: string;
+  // Position in canvas coordinates (top-left origin, scaled)
+  canvasX: number;
+  canvasY: number;
+  canvasWidth: number;
+  canvasHeight: number;
+}
+
+export async function extractTextItems(
+  pdf: pdfjsLib.PDFDocumentProxy,
+  pageNum: number,
+  scale: number
+): Promise<{ items: ExtractedTextItem[]; pageHeight: number }> {
+  const page = await pdf.getPage(pageNum);
+  const viewport = page.getViewport({ scale: 1 });
+  const textContent = await page.getTextContent();
+  const items: ExtractedTextItem[] = [];
+
+  let idx = 0;
+  for (const item of textContent.items) {
+    // Skip non-text items (marked content, etc.)
+    if (!("str" in item) || !item.str.trim()) continue;
+
+    const tx = item.transform;
+    // transform = [scaleX, skewX, skewY, scaleY, translateX, translateY]
+    const fontSize = Math.abs(tx[3]); // scaleY ≈ font size
+    const pdfX = tx[4];
+    const pdfY = tx[5];
+    const pdfWidth = item.width;
+    const pdfHeight = fontSize;
+
+    // Convert to canvas coords (top-left origin, apply scale)
+    const canvasX = pdfX * scale;
+    const canvasY = (viewport.height - pdfY) * scale;
+    const canvasWidth = pdfWidth * scale;
+    const canvasHeight = fontSize * scale;
+
+    items.push({
+      id: `txt_${pageNum}_${idx++}`,
+      str: item.str,
+      pdfX,
+      pdfY,
+      pdfWidth,
+      pdfHeight,
+      fontSize,
+      fontFamily: item.fontName || "Helvetica",
+      canvasX,
+      canvasY,
+      canvasWidth,
+      canvasHeight,
+    });
+  }
+
+  return { items, pageHeight: viewport.height };
+}
+
 export async function loadPDF(data: ArrayBuffer) {
   ensureWorker();
   const pdf = await pdfjsLib.getDocument({ data: new Uint8Array(data) })
