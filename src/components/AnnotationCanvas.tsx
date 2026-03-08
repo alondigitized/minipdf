@@ -63,8 +63,9 @@ export default function AnnotationCanvas({
     for (const ann of annotations) {
       if (ann.type === "text" && ann.id !== editingTextId) {
         ctx.font = `${ann.fontSize || 16}px ${getFontCSS(ann.fontFamily)}`;
+        ctx.textBaseline = "top";
         ctx.fillStyle = ann.color;
-        ctx.fillText(ann.text || "", ann.x, ann.y + (ann.fontSize || 16));
+        ctx.fillText(ann.text || "", ann.x, ann.y);
       } else if (ann.type === "highlight") {
         ctx.fillStyle = ann.color;
         ctx.globalAlpha = 0.3;
@@ -99,10 +100,11 @@ export default function AnnotationCanvas({
         ctx.lineWidth = 2;
         ctx.setLineDash([4, 4]);
         if (ann.type === "text") {
+          ctx.font = `${ann.fontSize || 16}px ${getFontCSS(ann.fontFamily)}`;
           const textWidth = ctx.measureText(ann.text || "").width;
           ctx.strokeRect(
             ann.x - 4,
-            ann.y - 2,
+            ann.y - 4,
             textWidth + 8,
             (ann.fontSize || 16) + 8
           );
@@ -178,9 +180,9 @@ export default function AnnotationCanvas({
       if (ann.type === "text") {
         const fs = ann.fontSize || 16;
         if (
-          pos.x >= ann.x &&
+          pos.x >= ann.x - 4 &&
           pos.x <= ann.x + 200 &&
-          pos.y >= ann.y &&
+          pos.y >= ann.y - 4 &&
           pos.y <= ann.y + fs + 4
         ) {
           return ann;
@@ -331,16 +333,18 @@ export default function AnnotationCanvas({
       {textPos && (
         <textarea
           ref={inputRef}
-          className="absolute bg-transparent border border-blue-400 rounded px-1 outline-none resize-none"
+          className="absolute bg-transparent outline outline-1 outline-blue-400 resize-none"
           style={{
             left: textPos.x,
             top: textPos.y,
             fontSize: fontSize,
             color: color,
             fontFamily: getFontCSS(fontFamily),
-            lineHeight: 1.2,
+            lineHeight: 1,
+            padding: 0,
+            border: "none",
             minWidth: 100,
-            minHeight: fontSize + 8,
+            minHeight: fontSize + 4,
           }}
           value={textInput}
           onChange={(e) => setTextInput(e.target.value)}

@@ -118,7 +118,9 @@ export async function exportPDF(
       if (ann.type === "text") {
         const fontSize = (ann.fontSize || 16) / scale;
         const x = ann.x / scale;
-        const y = pageHeight - ann.y / scale - fontSize;
+        // ann.y is top of text (textBaseline="top"); PDF drawText y is baseline
+        // baseline = top - ascent; ascent ≈ 0.75 * fontSize
+        const y = pageHeight - ann.y / scale - 0.75 * fontSize;
         const font = await getStdFont(ann.fontFamily);
         page.drawText(ann.text || "", {
           x,
