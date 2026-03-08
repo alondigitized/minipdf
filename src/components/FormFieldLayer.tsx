@@ -106,14 +106,16 @@ export default function FormFieldLayer({
           );
         }
 
-        // Text input: font fills ~80% of field height, vertically centered
+        // Text input: font fills ~75% of field height
         const fieldFontSize = Math.max(field.canvasHeight * 0.75, 9);
+        // Shift input up to counteract browser internal padding
+        const nudgeUp = field.canvasHeight * 0.15;
 
         // Text input field
         return (
           <div
             key={field.id}
-            className="absolute"
+            className="absolute overflow-hidden"
             style={{
               left: field.canvasX,
               top: field.canvasY,
@@ -129,11 +131,14 @@ export default function FormFieldLayer({
                 onChange={(e) =>
                   onFieldChange(field.fieldName, e.target.value, false)
                 }
-                className="w-full h-full bg-transparent outline-none resize-none"
+                className="bg-transparent outline-none resize-none"
                 style={{
+                  width: "100%",
+                  height: field.canvasHeight + nudgeUp,
+                  marginTop: -nudgeUp,
                   fontSize: fieldFontSize,
                   lineHeight: 1.2,
-                  padding: `${(field.canvasHeight - fieldFontSize) / 2}px 2px`,
+                  padding: `${nudgeUp}px 2px 0`,
                   border: "none",
                   color: "#000",
                   fontFamily: "'Courier New', Courier, monospace",
@@ -149,15 +154,17 @@ export default function FormFieldLayer({
                 onChange={(e) =>
                   onFieldChange(field.fieldName, e.target.value, false)
                 }
-                className="w-full h-full bg-transparent outline-none"
+                className="bg-transparent outline-none"
                 style={{
+                  width: "100%",
+                  height: field.canvasHeight + nudgeUp,
+                  marginTop: -nudgeUp,
                   fontSize: fieldFontSize,
                   lineHeight: 1,
                   padding: 0,
                   border: "none",
                   color: "#000",
                   fontFamily: "'Courier New', Courier, monospace",
-                  verticalAlign: "middle",
                 }}
                 title={field.fieldName}
               />
