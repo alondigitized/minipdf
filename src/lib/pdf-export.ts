@@ -199,23 +199,59 @@ export async function exportPDF(
   if (formFieldEdits && formFieldEdits.size > 0) {
     try {
       const form = pdfDoc.getForm();
-      // Embed Courier for form field appearance streams
       const formFont = await pdfDoc.embedFont(StandardFonts.Courier);
 
+      // Build a lookup map: pdf-lib field name -> field object
+      // PDF.js uses XFA names like "topmostSubform[0].Page1[0].f1_14[0]"
+      // pdf-lib uses AcroForm names like "topmostSubform.Page1.f1_14"
+      const pdfLibFields = form.getFields();
+      const fieldByName = new Map<string, string>(); // normalized -> actual pdf-lib name
+      for (const f of pdfLibFields) {
+        const name = f.getName();
+        fieldByName.set(name, name);
+        // Also index by stripped name (no array indices) and leaf name
+        const stripped = name.replace(/\[\d+\]/g, "");
+        fieldByName.set(stripped, name);
+        const leaf = name.split(".").pop() || name;
+        if (!fieldByName.has(leaf)) {
+          fieldByName.set(leaf, name);
+        }
+      }
+
+      // Resolve a PDF.js field name to a pdf-lib field name
+      const resolveFieldName = (pdjsName: string): string | null => {
+        // Direct match
+        if (fieldByName.has(pdjsName)) return fieldByName.get(pdjsName)!;
+        // Strip array indices: "topmostSubform[0].Page1[0].f1_14[0]" -> "topmostSubform.Page1.f1_14"
+        const stripped = pdjsName.replace(/\[\d+\]/g, "");
+        if (fieldByName.has(stripped)) return fieldByName.get(stripped)!;
+        // Try leaf name only: "f1_14"
+        const leaf = stripped.split(".").pop() || stripped;
+        if (fieldByName.has(leaf)) return fieldByName.get(leaf)!;
+        return null;
+      };
+
       for (const [fieldName, edit] of Array.from(formFieldEdits.entries())) {
-        // Try as text field first, then checkbox
+        const resolvedName = resolveFieldName(fieldName);
+        if (!resolvedName) {
+          console.warn(`[export] No pdf-lib field found for "${fieldName}"`);
+          continue;
+        }
+
+        // Try text field
         if (edit.value !== undefined && edit.value !== "") {
           try {
-            const tf = form.getTextField(fieldName);
+            const tf = form.getTextField(resolvedName);
             tf.defaultUpdateAppearances(formFont);
             tf.setText(edit.value);
             continue;
-          } catch (e) {
-            console.warn(`[export] TextField "${fieldName}" failed:`, e);
+          } catch {
+            // Not a text field
           }
         }
+        // Try checkbox
         try {
-          const cb = form.getCheckBox(fieldName);
+          const cb = form.getCheckBox(resolvedName);
           if (edit.isChecked) {
             cb.check();
           } else {
@@ -225,25 +261,22 @@ export async function exportPDF(
         } catch {
           // Not a checkbox
         }
-        // Fallback: try text field even if value is empty
+        // Fallback: text field with empty or any value
         try {
-          const tf = form.getTextField(fieldName);
+          const tf = form.getTextField(resolvedName);
           tf.defaultUpdateAppearances(formFont);
           tf.setText(edit.value || "");
-        } catch (e) {
-          console.warn(`[export] Field "${fieldName}" unsupported:`, e);
+        } catch {
+          // Skip unsupported field types
         }
       }
 
-      // Regenerate all field appearance streams with our embedded font
+      // Regenerate appearance streams
       try {
         form.updateFieldAppearances(formFont);
       } catch {
         // Some fields may not support appearance updates
       }
-
-      // Flatten form so values are baked into the page content
-      form.flatten();
     } catch (e) {
       console.error("[export] Form field processing failed:", e);
     }
