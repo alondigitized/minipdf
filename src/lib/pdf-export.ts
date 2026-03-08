@@ -109,19 +109,18 @@ export async function exportPDF(
         }
       } else if (ann.type === "image" && ann.imageData) {
         try {
-          let image;
-          if (
-            ann.imageData.startsWith("data:image/png") ||
-            ann.imageData.includes("png")
-          ) {
-            const base64 = ann.imageData.split(",")[1];
-            const bytes = Uint8Array.from(atob(base64), (c) => c.charCodeAt(0));
-            image = await pdfDoc.embedPng(bytes);
-          } else {
-            const base64 = ann.imageData.split(",")[1];
-            const bytes = Uint8Array.from(atob(base64), (c) => c.charCodeAt(0));
-            image = await pdfDoc.embedJpg(bytes);
-          }
+          const parts = ann.imageData.split(",");
+          if (parts.length !== 2) continue;
+          const header = parts[0]; // e.g. "data:image/png;base64"
+          const base64 = parts[1];
+          if (!base64 || !/^[A-Za-z0-9+/=]+$/.test(base64)) continue;
+
+          const bytes = Uint8Array.from(atob(base64), (c) => c.charCodeAt(0));
+          const isPng = /^data:image\/png/i.test(header);
+          const image = isPng
+            ? await pdfDoc.embedPng(bytes)
+            : await pdfDoc.embedJpg(bytes);
+
           const x = ann.x / scale;
           const w = ann.width! / scale;
           const h = ann.height! / scale;

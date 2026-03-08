@@ -1,12 +1,13 @@
-import * as pdfjsLib from "pdfjs-dist";
+import type * as PdfjsType from "pdfjs-dist";
 
-let workerInitialized = false;
+let pdfjsLib: typeof PdfjsType | null = null;
 
-function ensureWorker() {
-  if (!workerInitialized) {
+async function ensureLib(): Promise<typeof PdfjsType> {
+  if (!pdfjsLib) {
+    pdfjsLib = await import("pdfjs-dist");
     pdfjsLib.GlobalWorkerOptions.workerSrc = "/pdf.worker.min.mjs";
-    workerInitialized = true;
   }
+  return pdfjsLib;
 }
 
 export interface ExtractedTextItem {
@@ -27,7 +28,7 @@ export interface ExtractedTextItem {
 }
 
 export async function extractTextItems(
-  pdf: pdfjsLib.PDFDocumentProxy,
+  pdf: PdfjsType.PDFDocumentProxy,
   pageNum: number,
   scale: number
 ): Promise<{ items: ExtractedTextItem[]; pageHeight: number }> {
@@ -75,14 +76,14 @@ export async function extractTextItems(
 }
 
 export async function loadPDF(data: ArrayBuffer) {
-  ensureWorker();
-  const pdf = await pdfjsLib.getDocument({ data: new Uint8Array(data) })
+  const lib = await ensureLib();
+  const pdf = await lib.getDocument({ data: new Uint8Array(data) })
     .promise;
   return pdf;
 }
 
 export async function renderPage(
-  pdf: pdfjsLib.PDFDocumentProxy,
+  pdf: PdfjsType.PDFDocumentProxy,
   pageNum: number,
   canvas: HTMLCanvasElement,
   scale: number
@@ -94,13 +95,13 @@ export async function renderPage(
   canvas.height = viewport.height;
 
   const ctx = canvas.getContext("2d")!;
-  await page.render({ canvasContext: ctx, viewport }).promise;
+  await page.render({ canvasContext: ctx, viewport, canvas }).promise;
 
   return { width: viewport.width, height: viewport.height };
 }
 
 export async function renderPageThumbnail(
-  pdf: pdfjsLib.PDFDocumentProxy,
+  pdf: PdfjsType.PDFDocumentProxy,
   pageNum: number,
   canvas: HTMLCanvasElement,
   maxWidth: number = 120
@@ -114,5 +115,5 @@ export async function renderPageThumbnail(
   canvas.height = viewport.height;
 
   const ctx = canvas.getContext("2d")!;
-  await page.render({ canvasContext: ctx, viewport }).promise;
+  await page.render({ canvasContext: ctx, viewport, canvas }).promise;
 }

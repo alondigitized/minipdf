@@ -119,7 +119,7 @@ export default function PDFEditor({ pdfData, fileName, onReset }: PDFEditorProps
   }, []);
 
   const handleImageFile = useCallback(
-    (e: React.ChangeEvent<HTMLInputElement>) => {
+    async (e: React.ChangeEvent<HTMLInputElement>) => {
       const file = e.target.files?.[0];
       if (!file) return;
 
@@ -132,12 +132,21 @@ export default function PDFEditor({ pdfData, fileName, onReset }: PDFEditorProps
         return;
       }
 
+      // Validate magic bytes
+      const header = new Uint8Array(await file.slice(0, 12).arrayBuffer());
+      const isPng = header[0] === 0x89 && header[1] === 0x50 && header[2] === 0x4e && header[3] === 0x47;
+      const isJpeg = header[0] === 0xff && header[1] === 0xd8 && header[2] === 0xff;
+      const isWebp = header[0] === 0x52 && header[1] === 0x49 && header[2] === 0x46 && header[3] === 0x46;
+      if (!isPng && !isJpeg && !isWebp) {
+        alert("Invalid image file. Only PNG, JPEG, and WebP are supported.");
+        return;
+      }
+
       const reader = new FileReader();
       reader.onload = (ev) => {
         const dataUrl = ev.target?.result as string;
         const img = new Image();
         img.onload = () => {
-          // Scale image to fit within 300px
           const maxDim = 300;
           let w = img.width;
           let h = img.height;
@@ -159,7 +168,6 @@ export default function PDFEditor({ pdfData, fileName, onReset }: PDFEditorProps
         img.src = dataUrl;
       };
       reader.readAsDataURL(file);
-      // Reset input so the same file can be selected again
       e.target.value = "";
     },
     [editor]
