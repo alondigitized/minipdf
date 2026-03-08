@@ -95,16 +95,6 @@ export default function TextEditLayer({
     return edit ? edit.newText : item.str;
   };
 
-  // Debug: log extraction results
-  useEffect(() => {
-    if (active) {
-      console.log("[TextEditLayer] active, textItems count:", textItems.length);
-      if (textItems.length > 0) {
-        console.log("[TextEditLayer] first item:", JSON.stringify(textItems[0]));
-      }
-    }
-  }, [active, textItems]);
-
   if (!active && textEdits.size === 0) return null;
 
   return (
@@ -117,12 +107,6 @@ export default function TextEditLayer({
         zIndex: active ? 20 : 5,
       }}
     >
-      {/* Debug border to confirm layer renders */}
-      {active && textItems.length === 0 && (
-        <div className="absolute top-2 left-2 bg-red-600 text-white text-xs px-2 py-1 rounded z-50">
-          No text items found on this page
-        </div>
-      )}
       {textItems.map((item) => {
         const isEditing = editingId === item.id;
         const hasEdit = textEdits.has(item.id);
