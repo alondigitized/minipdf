@@ -123,6 +123,99 @@ export async function extractTextItems(
   return { items, pageHeight: viewport.height };
 }
 
+export interface FormField {
+  id: string;
+  fieldName: string;
+  fieldType: "text" | "checkbox";
+  // Canvas coordinates (top-left origin, scaled)
+  canvasX: number;
+  canvasY: number;
+  canvasWidth: number;
+  canvasHeight: number;
+  // Current value
+  value: string;
+  // For checkboxes
+  isChecked: boolean;
+  exportValue: string; // the "on" value for checkbox
+  // Field properties
+  readOnly: boolean;
+  maxLen: number; // 0 = unlimited
+  multiline: boolean;
+  pageNum: number;
+}
+
+export async function extractFormFields(
+  pdf: PdfjsType.PDFDocumentProxy,
+  pageNum: number,
+  scale: number
+): Promise<FormField[]> {
+  const page = await pdf.getPage(pageNum);
+  const viewport = page.getViewport({ scale: 1 });
+  const annotations = await page.getAnnotations({ intent: "display" as any });
+
+  const fields: FormField[] = [];
+  let idx = 0;
+
+  for (const ann of annotations) {
+    // Only process widget annotations (form fields)
+    if (ann.subtype !== "Widget" || !ann.rect) continue;
+
+    const rect = ann.rect; // [x1, y1, x2, y2] in PDF coords
+    const canvasX = rect[0] * scale;
+    const canvasY = (viewport.height - rect[3]) * scale;
+    const canvasWidth = (rect[2] - rect[0]) * scale;
+    const canvasHeight = (rect[3] - rect[1]) * scale;
+
+    if (canvasWidth < 1 || canvasHeight < 1) continue;
+
+    const fieldName = ann.fieldName || `field_${pageNum}_${idx}`;
+
+    if (ann.fieldType === "Tx") {
+      // Text input field
+      fields.push({
+        id: `form_${pageNum}_${idx++}`,
+        fieldName,
+        fieldType: "text",
+        canvasX,
+        canvasY,
+        canvasWidth,
+        canvasHeight,
+        value: ann.fieldValue || "",
+        isChecked: false,
+        exportValue: "",
+        readOnly: !!ann.readOnly,
+        maxLen: ann.maxLen || 0,
+        multiline: !!ann.multiLine,
+        pageNum,
+      });
+    } else if (ann.fieldType === "Btn" && ann.checkBox) {
+      // Checkbox
+      const exportValue = ann.exportValue || "Yes";
+      const isChecked = ann.fieldValue === exportValue ||
+        ann.fieldValue === "Yes" ||
+        ann.fieldValue === "On";
+      fields.push({
+        id: `form_${pageNum}_${idx++}`,
+        fieldName,
+        fieldType: "checkbox",
+        canvasX,
+        canvasY,
+        canvasWidth,
+        canvasHeight,
+        value: ann.fieldValue || "",
+        isChecked,
+        exportValue,
+        readOnly: !!ann.readOnly,
+        maxLen: 0,
+        multiline: false,
+        pageNum,
+      });
+    }
+  }
+
+  return fields;
+}
+
 export async function loadPDF(data: ArrayBuffer) {
   const lib = await ensureLib();
   // Copy the data so the worker transfer doesn't detach the original buffer

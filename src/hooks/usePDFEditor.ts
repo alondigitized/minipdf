@@ -72,6 +72,10 @@ export function usePDFEditor() {
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [undoStack, setUndoStack] = useState<Map<number, Annotation[]>[]>([]);
   const [textEdits, setTextEdits] = useState<Map<string, TextEdit>>(new Map());
+  // Form field edits keyed by fieldName
+  const [formFieldEdits, setFormFieldEdits] = useState<
+    Map<string, { value: string; isChecked: boolean }>
+  >(new Map());
 
   const getPageAnnotations = useCallback(
     (page: number): Annotation[] => {
@@ -150,6 +154,17 @@ export function usePDFEditor() {
     [textEdits]
   );
 
+  const setFormFieldValue = useCallback(
+    (fieldName: string, value: string, isChecked: boolean) => {
+      setFormFieldEdits((prev) => {
+        const next = new Map(prev);
+        next.set(fieldName, { value, isChecked });
+        return next;
+      });
+    },
+    []
+  );
+
   const undo = useCallback(() => {
     setUndoStack((prev) => {
       if (prev.length === 0) return prev;
@@ -187,5 +202,7 @@ export function usePDFEditor() {
     textEdits,
     setTextEdit,
     getTextEdit,
+    formFieldEdits,
+    setFormFieldValue,
   };
 }

@@ -38,7 +38,8 @@ export async function exportPDF(
   originalData: ArrayBuffer,
   annotations: Map<number, Annotation[]>,
   scale: number,
-  textEdits?: Map<string, TextEdit>
+  textEdits?: Map<string, TextEdit>,
+  formFieldEdits?: Map<string, { value: string; isChecked: boolean }>
 ): Promise<ArrayBuffer> {
   const pdfDoc = await PDFDocument.load(new Uint8Array(originalData), {
     ignoreEncryption: true,
@@ -191,6 +192,35 @@ export async function exportPDF(
           // Skip invalid images
         }
       }
+    }
+  }
+
+  // Apply form field edits
+  if (formFieldEdits && formFieldEdits.size > 0) {
+    try {
+      const form = pdfDoc.getForm();
+      for (const [fieldName, edit] of Array.from(formFieldEdits.entries())) {
+        try {
+          const field = form.getFieldMaybe(fieldName);
+          if (!field) continue;
+
+          if (field.constructor.name === "PDFCheckBox") {
+            const cb = form.getCheckBox(fieldName);
+            if (edit.isChecked) {
+              cb.check();
+            } else {
+              cb.uncheck();
+            }
+          } else if (field.constructor.name === "PDFTextField") {
+            const tf = form.getTextField(fieldName);
+            tf.setText(edit.value || "");
+          }
+        } catch {
+          // Skip fields that can't be modified
+        }
+      }
+    } catch {
+      // PDF may not have a form
     }
   }
 

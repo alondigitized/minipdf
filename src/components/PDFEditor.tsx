@@ -9,6 +9,7 @@ import Toolbar from "./Toolbar";
 import PageThumbnails from "./PageThumbnails";
 import AnnotationCanvas from "./AnnotationCanvas";
 import TextEditLayer from "./TextEditLayer";
+import FormFieldLayer from "./FormFieldLayer";
 
 interface PDFEditorProps {
   pdfData: ArrayBuffer;
@@ -98,7 +99,7 @@ export default function PDFEditor({ pdfData, fileName, onReset }: PDFEditorProps
     if (!pdf) return;
     setExporting(true);
     try {
-      const buffer = await exportPDF(pdfData, editor.annotations, editor.scale, editor.textEdits);
+      const buffer = await exportPDF(pdfData, editor.annotations, editor.scale, editor.textEdits, editor.formFieldEdits);
       const blob = new Blob([buffer], { type: "application/pdf" });
       const url = URL.createObjectURL(blob);
       const a = document.createElement("a");
@@ -114,7 +115,7 @@ export default function PDFEditor({ pdfData, fileName, onReset }: PDFEditorProps
     } finally {
       setExporting(false);
     }
-  }, [pdf, pdfData, editor.annotations, editor.scale, editor.textEdits, fileName]);
+  }, [pdf, pdfData, editor.annotations, editor.scale, editor.textEdits, editor.formFieldEdits, fileName]);
 
   const handleImageUpload = useCallback(() => {
     imageInputRef.current?.click();
@@ -239,6 +240,18 @@ export default function PDFEditor({ pdfData, fileName, onReset }: PDFEditorProps
         <div className="flex-1 overflow-auto bg-[#1a1a1a] flex items-start justify-center p-8">
           <div className="pdf-page-container" style={{ width: pageSize.width, height: pageSize.height }}>
             <canvas ref={pdfCanvasRef} style={{ width: pageSize.width, height: pageSize.height }} />
+            {pageSize.width > 0 && pdf && (
+              <FormFieldLayer
+                pdf={pdf}
+                pageNum={editor.currentPage}
+                scale={editor.scale}
+                width={pageSize.width}
+                height={pageSize.height}
+                tool={editor.tool}
+                formFieldEdits={editor.formFieldEdits}
+                onFieldChange={editor.setFormFieldValue}
+              />
+            )}
             {pageSize.width > 0 && pdf && (
               <TextEditLayer
                 pdf={pdf}
