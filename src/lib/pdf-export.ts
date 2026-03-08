@@ -200,23 +200,31 @@ export async function exportPDF(
     try {
       const form = pdfDoc.getForm();
       for (const [fieldName, edit] of Array.from(formFieldEdits.entries())) {
-        try {
-          const field = form.getFieldMaybe(fieldName);
-          if (!field) continue;
-
-          if (field.constructor.name === "PDFCheckBox") {
-            const cb = form.getCheckBox(fieldName);
-            if (edit.isChecked) {
-              cb.check();
-            } else {
-              cb.uncheck();
-            }
-          } else if (field.constructor.name === "PDFTextField") {
+        // Try as text field first, then checkbox — typed getters throw if wrong type
+        if (edit.value !== undefined && edit.value !== "") {
+          try {
             const tf = form.getTextField(fieldName);
-            tf.setText(edit.value || "");
+            tf.setText(edit.value);
+            continue;
+          } catch {
+            // Not a text field
+          }
+        }
+        try {
+          const cb = form.getCheckBox(fieldName);
+          if (edit.isChecked) {
+            cb.check();
+          } else {
+            cb.uncheck();
           }
         } catch {
-          // Skip fields that can't be modified
+          // Not a checkbox either — try text field as fallback
+          try {
+            const tf = form.getTextField(fieldName);
+            tf.setText(edit.value || "");
+          } catch {
+            // Skip unsupported field types
+          }
         }
       }
     } catch {
