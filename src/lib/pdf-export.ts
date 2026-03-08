@@ -1,7 +1,7 @@
 import { PDFDocument, rgb, StandardFonts } from "pdf-lib";
 import type { PDFFont } from "pdf-lib";
 import fontkit from "@pdf-lib/fontkit";
-import type { Annotation, TextEdit } from "@/hooks/usePDFEditor";
+import type { Annotation, TextEdit, AnnotationFont } from "@/hooks/usePDFEditor";
 
 function hexToRgb(hex: string) {
   const r = parseInt(hex.slice(1, 3), 16) / 255;
@@ -64,8 +64,20 @@ export async function exportPDF(
     return embeddedFonts[pickVariant(isBold, isItalic)];
   }
 
-  // For annotations (add text), use standard Helvetica
-  const defaultFont = await pdfDoc.embedFont(StandardFonts.Helvetica);
+  // Standard fonts for text annotations (lazy-loaded per variant)
+  const stdFonts: Partial<Record<string, PDFFont>> = {};
+  async function getStdFont(family?: AnnotationFont): Promise<PDFFont> {
+    const key = family || "helvetica";
+    if (!stdFonts[key]) {
+      const fontMap: Record<AnnotationFont, StandardFonts> = {
+        helvetica: StandardFonts.Helvetica,
+        courier: StandardFonts.Courier,
+        times: StandardFonts.TimesRoman,
+      };
+      stdFonts[key] = await pdfDoc.embedFont(fontMap[key]);
+    }
+    return stdFonts[key]!;
+  }
 
   // Apply text edits with proper font matching
   if (textEdits && textEdits.size > 0) {
@@ -107,11 +119,12 @@ export async function exportPDF(
         const fontSize = (ann.fontSize || 16) / scale;
         const x = ann.x / scale;
         const y = pageHeight - ann.y / scale - fontSize;
+        const font = await getStdFont(ann.fontFamily);
         page.drawText(ann.text || "", {
           x,
           y,
           size: fontSize,
-          font: defaultFont,
+          font,
           color: hexToRgb(ann.color),
         });
       } else if (ann.type === "highlight") {

@@ -1,6 +1,6 @@
 "use client";
 
-import { type ToolType } from "@/hooks/usePDFEditor";
+import { type ToolType, type AnnotationFont } from "@/hooks/usePDFEditor";
 
 interface ToolbarProps {
   tool: ToolType;
@@ -9,6 +9,8 @@ interface ToolbarProps {
   setColor: (c: string) => void;
   fontSize: number;
   setFontSize: (s: number) => void;
+  fontFamily: AnnotationFont;
+  setFontFamily: (f: AnnotationFont) => void;
   strokeWidth: number;
   setStrokeWidth: (w: number) => void;
   scale: number;
@@ -51,6 +53,8 @@ export default function Toolbar({
   setColor,
   fontSize,
   setFontSize,
+  fontFamily,
+  setFontFamily,
   strokeWidth,
   setStrokeWidth,
   scale,
@@ -111,9 +115,18 @@ export default function Toolbar({
 
       <div className="w-px h-6 bg-white/10" />
 
-      {/* Size controls */}
+      {/* Size & font controls */}
       {(tool === "text") && (
-        <div className="flex items-center gap-1">
+        <div className="flex items-center gap-2">
+          <select
+            value={fontFamily}
+            onChange={(e) => setFontFamily(e.target.value as AnnotationFont)}
+            className="bg-white/10 text-white/80 text-xs rounded px-2 py-1 border border-white/20 outline-none"
+          >
+            <option value="courier">Courier (IRS fields)</option>
+            <option value="helvetica">Helvetica / Arial</option>
+            <option value="times">Times New Roman</option>
+          </select>
           <label className="text-xs text-white/40">Size</label>
           <input
             type="range"

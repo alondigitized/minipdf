@@ -213,6 +213,8 @@ export default function PDFEditor({ pdfData, fileName, onReset }: PDFEditorProps
         setColor={editor.setColor}
         fontSize={editor.fontSize}
         setFontSize={editor.setFontSize}
+        fontFamily={editor.fontFamily}
+        setFontFamily={editor.setFontFamily}
         strokeWidth={editor.strokeWidth}
         setStrokeWidth={editor.setStrokeWidth}
         scale={editor.scale}
@@ -256,6 +258,7 @@ export default function PDFEditor({ pdfData, fileName, onReset }: PDFEditorProps
                 tool={editor.tool}
                 color={editor.color}
                 fontSize={editor.fontSize}
+                fontFamily={editor.fontFamily}
                 strokeWidth={editor.strokeWidth}
                 annotations={editor.getPageAnnotations(editor.currentPage)}
                 selectedId={editor.selectedId}

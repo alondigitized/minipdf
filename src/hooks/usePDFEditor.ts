@@ -34,6 +34,8 @@ export interface Point {
   y: number;
 }
 
+export type AnnotationFont = "helvetica" | "courier" | "times";
+
 export interface Annotation {
   id: string;
   type: "text" | "draw" | "highlight" | "rectangle" | "image";
@@ -43,6 +45,7 @@ export interface Annotation {
   height?: number;
   text?: string;
   fontSize?: number;
+  fontFamily?: AnnotationFont;
   color: string;
   strokeWidth?: number;
   points?: Point[];
@@ -62,6 +65,7 @@ export function usePDFEditor() {
   const [color, setColor] = useState("#000000");
   const [fontSize, setFontSize] = useState(16);
   const [strokeWidth, setStrokeWidth] = useState(2);
+  const [fontFamily, setFontFamily] = useState<AnnotationFont>("courier");
   const [annotations, setAnnotations] = useState<Map<number, Annotation[]>>(
     new Map()
   );
@@ -170,6 +174,8 @@ export function usePDFEditor() {
     setFontSize,
     strokeWidth,
     setStrokeWidth,
+    fontFamily,
+    setFontFamily,
     annotations,
     getPageAnnotations,
     addAnnotation,

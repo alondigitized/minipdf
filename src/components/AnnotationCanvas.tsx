@@ -1,7 +1,17 @@
 "use client";
 
 import { useRef, useEffect, useCallback, useState } from "react";
-import type { ToolType, Annotation, Point } from "@/hooks/usePDFEditor";
+import type { ToolType, Annotation, Point, AnnotationFont } from "@/hooks/usePDFEditor";
+
+const FONT_CSS: Record<AnnotationFont, string> = {
+  helvetica: "Helvetica, Arial, sans-serif",
+  courier: "'Courier New', Courier, monospace",
+  times: "'Times New Roman', Times, serif",
+};
+
+function getFontCSS(font?: AnnotationFont): string {
+  return FONT_CSS[font || "helvetica"];
+}
 
 interface AnnotationCanvasProps {
   width: number;
@@ -9,6 +19,7 @@ interface AnnotationCanvasProps {
   tool: ToolType;
   color: string;
   fontSize: number;
+  fontFamily: AnnotationFont;
   strokeWidth: number;
   annotations: Annotation[];
   selectedId: string | null;
@@ -24,6 +35,7 @@ export default function AnnotationCanvas({
   tool,
   color,
   fontSize,
+  fontFamily,
   strokeWidth,
   annotations,
   selectedId,
@@ -50,7 +62,7 @@ export default function AnnotationCanvas({
 
     for (const ann of annotations) {
       if (ann.type === "text" && ann.id !== editingTextId) {
-        ctx.font = `${ann.fontSize || 16}px Helvetica, Arial, sans-serif`;
+        ctx.font = `${ann.fontSize || 16}px ${getFontCSS(ann.fontFamily)}`;
         ctx.fillStyle = ann.color;
         ctx.fillText(ann.text || "", ann.x, ann.y + (ann.fontSize || 16));
       } else if (ann.type === "highlight") {
@@ -276,6 +288,7 @@ export default function AnnotationCanvas({
         y: textPos.y,
         text: textInput,
         fontSize,
+        fontFamily,
         color,
       });
     }
@@ -324,7 +337,7 @@ export default function AnnotationCanvas({
             top: textPos.y,
             fontSize: fontSize,
             color: color,
-            fontFamily: "Helvetica, Arial, sans-serif",
+            fontFamily: getFontCSS(fontFamily),
             lineHeight: 1.2,
             minWidth: 100,
             minHeight: fontSize + 8,
