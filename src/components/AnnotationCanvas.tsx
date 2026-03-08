@@ -290,6 +290,7 @@ export default function AnnotationCanvas({
         width,
         height,
         pointerEvents: tool === "editText" ? "none" : "auto",
+        zIndex: tool === "editText" ? 1 : 10,
       }}
     >
       <canvas

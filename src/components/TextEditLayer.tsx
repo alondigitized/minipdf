@@ -104,6 +104,7 @@ export default function TextEditLayer({
         width,
         height,
         pointerEvents: active ? "auto" : "none",
+        zIndex: active ? 20 : 5,
       }}
     >
       {textItems.map((item) => {
