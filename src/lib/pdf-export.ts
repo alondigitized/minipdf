@@ -1,7 +1,7 @@
 import { PDFDocument, rgb, StandardFonts } from "pdf-lib";
 import type { PDFFont } from "pdf-lib";
+import fontkit from "@pdf-lib/fontkit";
 import type { Annotation, TextEdit } from "@/hooks/usePDFEditor";
-import { resolveFont } from "./font-map";
 
 function hexToRgb(hex: string) {
   const r = parseInt(hex.slice(1, 3), 16) / 255;
@@ -44,6 +44,7 @@ export async function exportPDF(
     ignoreEncryption: true,
     updateMetadata: false,
   });
+  pdfDoc.registerFontkit(fontkit);
 
   const pages = pdfDoc.getPages();
 
