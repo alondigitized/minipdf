@@ -34,11 +34,9 @@ export default function TextEditLayer({
   // Extract text items when page or scale changes
   useEffect(() => {
     let cancelled = false;
-    console.log("[TextEditLayer] extracting text for page", pageNum, "scale", scale);
     (async () => {
       try {
         const result = await extractTextItems(pdf, pageNum, scale);
-        console.log("[TextEditLayer] extracted", result.items.length, "items");
         if (!cancelled) {
           setTextItems(result.items);
           setPageHeight(result.pageHeight);
@@ -96,14 +94,6 @@ export default function TextEditLayer({
     const edit = textEdits.get(item.id);
     return edit ? edit.newText : item.str;
   };
-
-  useEffect(() => {
-    console.log("[TextEditLayer] active:", active, "items:", textItems.length, "editing:", editingId);
-    if (textItems.length > 0) {
-      const i = textItems[0];
-      console.log("[TextEditLayer] sample item:", i.str, "pos:", i.canvasX, i.canvasY, i.canvasWidth, i.canvasHeight);
-    }
-  }, [active, textItems, editingId]);
 
   if (!active && textEdits.size === 0) return null;
 

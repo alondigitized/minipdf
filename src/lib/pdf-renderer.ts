@@ -107,7 +107,7 @@ export async function renderPage(
   canvas.height = viewport.height;
 
   const ctx = canvas.getContext("2d")!;
-  await page.render({ canvasContext: ctx, viewport, canvas }).promise;
+  await page.render({ canvasContext: ctx, viewport }).promise;
 
   return { width: viewport.width, height: viewport.height };
 }
@@ -127,5 +127,5 @@ export async function renderPageThumbnail(
   canvas.height = viewport.height;
 
   const ctx = canvas.getContext("2d")!;
-  await page.render({ canvasContext: ctx, viewport, canvas }).promise;
+  await page.render({ canvasContext: ctx, viewport }).promise;
 }
