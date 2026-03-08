@@ -1,5 +1,7 @@
 import { PDFDocument, rgb, StandardFonts } from "pdf-lib";
+import type { PDFFont } from "pdf-lib";
 import type { Annotation, TextEdit } from "@/hooks/usePDFEditor";
+import { resolveFont } from "./font-map";
 
 function hexToRgb(hex: string) {
   const r = parseInt(hex.slice(1, 3), 16) / 255;
@@ -18,14 +20,31 @@ export async function exportPDF(
     ignoreEncryption: true,
     updateMetadata: false,
   });
-  const font = await pdfDoc.embedFont(StandardFonts.Helvetica);
+
+  // Cache embedded fonts to avoid re-embedding the same font
+  const fontCache = new Map<StandardFonts, PDFFont>();
+  async function getFont(standardFont: StandardFonts): Promise<PDFFont> {
+    let cached = fontCache.get(standardFont);
+    if (!cached) {
+      cached = await pdfDoc.embedFont(standardFont);
+      fontCache.set(standardFont, cached);
+    }
+    return cached;
+  }
+
+  // Default font for annotations
+  const defaultFont = await getFont(StandardFonts.Helvetica);
   const pages = pdfDoc.getPages();
 
-  // Apply text edits: white-out original text area, draw new text
+  // Apply text edits: white-out original text area, draw new text with matched font
   if (textEdits && textEdits.size > 0) {
     for (const [, edit] of Array.from(textEdits.entries())) {
       const page = pages[edit.pageNum - 1];
       if (!page) continue;
+
+      // Resolve the font from the original text
+      const match = resolveFont(edit.fontFamily);
+      const font = await getFont(match.font);
 
       const padding = 2;
       // White-out the original text area
@@ -37,7 +56,7 @@ export async function exportPDF(
         color: rgb(1, 1, 1),
       });
 
-      // Draw the replacement text
+      // Draw the replacement text with the matched font
       page.drawText(edit.newText, {
         x: edit.pdfX,
         y: edit.pdfY,
@@ -55,10 +74,6 @@ export async function exportPDF(
     const { width: pageWidth, height: pageHeight } = page.getSize();
 
     for (const ann of pageAnnotations) {
-      // Convert canvas coords to PDF coords (PDF origin is bottom-left)
-      const sx = pageWidth / (pageWidth * scale);
-      const sy = pageHeight / (pageHeight * scale);
-
       if (ann.type === "text") {
         const fontSize = (ann.fontSize || 16) / scale;
         const x = ann.x / scale;
@@ -67,7 +82,7 @@ export async function exportPDF(
           x,
           y,
           size: fontSize,
-          font,
+          font: defaultFont,
           color: hexToRgb(ann.color),
         });
       } else if (ann.type === "highlight") {
@@ -93,7 +108,6 @@ export async function exportPDF(
           borderWidth: (ann.strokeWidth || 2) / scale,
         });
       } else if (ann.type === "draw" && ann.points && ann.points.length > 1) {
-        // Draw freehand paths as series of small lines
         for (let i = 1; i < ann.points.length; i++) {
           const p0 = ann.points[i - 1];
           const p1 = ann.points[i];
@@ -114,7 +128,7 @@ export async function exportPDF(
         try {
           const parts = ann.imageData.split(",");
           if (parts.length !== 2) continue;
-          const header = parts[0]; // e.g. "data:image/png;base64"
+          const header = parts[0];
           const base64 = parts[1];
           if (!base64 || !/^[A-Za-z0-9+/=]+$/.test(base64)) continue;
 

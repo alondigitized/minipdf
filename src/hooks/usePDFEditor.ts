@@ -23,6 +23,7 @@ export interface TextEdit {
   pdfWidth: number;
   pdfHeight: number;
   fontSize: number;
+  fontFamily: string;
 }
 
 export interface Point {

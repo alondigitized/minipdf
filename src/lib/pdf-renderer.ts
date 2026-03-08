@@ -35,6 +35,10 @@ export async function extractTextItems(
   const page = await pdf.getPage(pageNum);
   const viewport = page.getViewport({ scale: 1 });
   const textContent = await page.getTextContent();
+  const styles = textContent.styles as Record<
+    string,
+    { fontFamily: string; ascent?: number; descent?: number }
+  >;
   const items: ExtractedTextItem[] = [];
 
   let idx = 0;
@@ -50,6 +54,10 @@ export async function extractTextItems(
     const pdfWidth = item.width;
     const pdfHeight = fontSize;
 
+    // Resolve font family from styles map (PDF.js internal name -> CSS family)
+    const styleEntry = styles[item.fontName];
+    const fontFamily = styleEntry?.fontFamily || item.fontName || "Helvetica";
+
     // Convert to canvas coords (top-left origin, apply scale)
     const canvasX = pdfX * scale;
     const canvasY = (viewport.height - pdfY) * scale;
@@ -64,7 +72,7 @@ export async function extractTextItems(
       pdfWidth,
       pdfHeight,
       fontSize,
-      fontFamily: item.fontName || "Helvetica",
+      fontFamily,
       canvasX,
       canvasY,
       canvasWidth,

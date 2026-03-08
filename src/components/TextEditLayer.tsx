@@ -83,6 +83,7 @@ export default function TextEditLayer({
         pdfWidth: item.pdfWidth,
         pdfHeight: item.pdfHeight,
         fontSize: item.fontSize,
+        fontFamily: item.fontFamily,
       });
       setEditingId(null);
     },
