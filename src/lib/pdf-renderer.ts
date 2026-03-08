@@ -42,20 +42,35 @@ export async function extractTextItems(
   // Build font metadata from page.commonObjs (has real font name, bold, italic)
   const fontMeta: Record<string, { name: string; bold: boolean; italic: boolean }> = {};
   // Trigger font loading via operatorList so commonObjs are populated
-  await page.getOperatorList();
+  try {
+    await page.getOperatorList();
+  } catch {
+    // Non-critical
+  }
   for (const item of textContent.items) {
     if (!("fontName" in item) || fontMeta[item.fontName]) continue;
     try {
-      const fontObj = (page as any).commonObjs.get(item.fontName);
-      if (fontObj) {
+      const obj = (page as any).commonObjs;
+      // commonObjs may use _objs map or get() method depending on pdfjs version
+      const fontObj = typeof obj.get === "function" ? obj.get(item.fontName) : null;
+      if (fontObj && fontObj.name) {
         fontMeta[item.fontName] = {
-          name: fontObj.name || item.fontName,
+          name: fontObj.name,
           bold: !!fontObj.bold,
           italic: !!fontObj.italic,
         };
       }
     } catch {
       // Font not available in commonObjs
+    }
+    // Fallback: detect bold/italic from the internal fontName string
+    if (!fontMeta[item.fontName]) {
+      const fn = item.fontName || "";
+      fontMeta[fn] = {
+        name: fn,
+        bold: /bold|heavy|black/i.test(fn),
+        italic: /italic|oblique/i.test(fn),
+      };
     }
   }
 

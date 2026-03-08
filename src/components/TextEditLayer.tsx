@@ -132,12 +132,15 @@ export default function TextEditLayer({
             {isEditing ? (
               <input
                 ref={inputRef}
-                className="w-full h-full bg-transparent border border-blue-500 outline-none px-0"
+                className="w-full h-full border border-blue-500 outline-none px-0"
                 style={{
                   fontSize: item.fontSize * scale,
                   lineHeight: 1,
                   fontFamily: "Helvetica, Arial, sans-serif",
+                  fontWeight: item.isBold ? "bold" : "normal",
+                  fontStyle: item.isItalic ? "italic" : "normal",
                   color: "#000",
+                  background: "transparent",
                   minWidth: 40,
                 }}
                 defaultValue={displayText}
@@ -157,23 +160,27 @@ export default function TextEditLayer({
                   active
                     ? "hover:bg-blue-500/10 hover:outline hover:outline-1 hover:outline-blue-400/50"
                     : ""
-                } ${hasEdit ? "bg-yellow-300/20 outline outline-1 outline-yellow-400/40" : ""}`}
+                } ${hasEdit ? "outline outline-1 outline-blue-400/30" : ""}`}
                 style={{
                   fontSize: item.fontSize * scale,
                   lineHeight: 1,
                   fontFamily: "Helvetica, Arial, sans-serif",
+                  fontWeight: item.isBold ? "bold" : "normal",
+                  fontStyle: item.isItalic ? "italic" : "normal",
                 }}
                 onClick={() => handleItemClick(item)}
                 title={active ? "Click to edit" : undefined}
               >
-                {/* Show replacement text visually over the original */}
                 {hasEdit && (
                   <span
-                    className="absolute inset-0 flex items-center bg-transparent text-black px-0"
+                    className="absolute inset-0 flex items-center text-black px-0"
                     style={{
                       fontSize: item.fontSize * scale,
                       lineHeight: 1,
                       fontFamily: "Helvetica, Arial, sans-serif",
+                      fontWeight: item.isBold ? "bold" : "normal",
+                      fontStyle: item.isItalic ? "italic" : "normal",
+                      background: "white",
                     }}
                   >
                     {displayText}
