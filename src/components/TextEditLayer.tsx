@@ -84,6 +84,9 @@ export default function TextEditLayer({
         pdfHeight: item.pdfHeight,
         fontSize: item.fontSize,
         fontFamily: item.fontFamily,
+        fontName: item.fontName,
+        isBold: item.isBold,
+        isItalic: item.isItalic,
       });
       setEditingId(null);
     },
@@ -129,7 +132,7 @@ export default function TextEditLayer({
             {isEditing ? (
               <input
                 ref={inputRef}
-                className="w-full h-full bg-white border border-blue-500 outline-none px-0"
+                className="w-full h-full bg-transparent border border-blue-500 outline-none px-0"
                 style={{
                   fontSize: item.fontSize * scale,
                   lineHeight: 1,
@@ -166,7 +169,7 @@ export default function TextEditLayer({
                 {/* Show replacement text visually over the original */}
                 {hasEdit && (
                   <span
-                    className="absolute inset-0 flex items-center bg-white/90 text-black px-0"
+                    className="absolute inset-0 flex items-center bg-transparent text-black px-0"
                     style={{
                       fontSize: item.fontSize * scale,
                       lineHeight: 1,

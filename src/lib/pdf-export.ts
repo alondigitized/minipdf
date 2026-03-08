@@ -10,6 +10,30 @@ function hexToRgb(hex: string) {
   return rgb(r, g, b);
 }
 
+type FontVariant = "regular" | "bold" | "italic" | "bolditalic";
+
+async function loadLiberationSans(): Promise<Record<FontVariant, ArrayBuffer>> {
+  const variants: Record<FontVariant, string> = {
+    regular: "/standard_fonts/LiberationSans-Regular.ttf",
+    bold: "/standard_fonts/LiberationSans-Bold.ttf",
+    italic: "/standard_fonts/LiberationSans-Italic.ttf",
+    bolditalic: "/standard_fonts/LiberationSans-BoldItalic.ttf",
+  };
+  const result: Partial<Record<FontVariant, ArrayBuffer>> = {};
+  for (const [key, url] of Object.entries(variants)) {
+    const resp = await fetch(url);
+    result[key as FontVariant] = await resp.arrayBuffer();
+  }
+  return result as Record<FontVariant, ArrayBuffer>;
+}
+
+function pickVariant(isBold: boolean, isItalic: boolean): FontVariant {
+  if (isBold && isItalic) return "bolditalic";
+  if (isBold) return "bold";
+  if (isItalic) return "italic";
+  return "regular";
+}
+
 export async function exportPDF(
   originalData: ArrayBuffer,
   annotations: Map<number, Annotation[]>,
@@ -21,30 +45,34 @@ export async function exportPDF(
     updateMetadata: false,
   });
 
-  // Cache embedded fonts to avoid re-embedding the same font
-  const fontCache = new Map<StandardFonts, PDFFont>();
-  async function getFont(standardFont: StandardFonts): Promise<PDFFont> {
-    let cached = fontCache.get(standardFont);
-    if (!cached) {
-      cached = await pdfDoc.embedFont(standardFont);
-      fontCache.set(standardFont, cached);
-    }
-    return cached;
-  }
-
-  // Default font for annotations
-  const defaultFont = await getFont(StandardFonts.Helvetica);
   const pages = pdfDoc.getPages();
 
-  // Apply text edits: white-out original text area, draw new text with matched font
+  // Embed Liberation Sans TTF fonts for text edits (metrically identical to Arial)
+  const embeddedFonts: Record<FontVariant, PDFFont> = {} as any;
+  let fontsLoaded = false;
+
+  async function getEditFont(isBold: boolean, isItalic: boolean): Promise<PDFFont> {
+    if (!fontsLoaded) {
+      const fontData = await loadLiberationSans();
+      embeddedFonts.regular = await pdfDoc.embedFont(fontData.regular);
+      embeddedFonts.bold = await pdfDoc.embedFont(fontData.bold);
+      embeddedFonts.italic = await pdfDoc.embedFont(fontData.italic);
+      embeddedFonts.bolditalic = await pdfDoc.embedFont(fontData.bolditalic);
+      fontsLoaded = true;
+    }
+    return embeddedFonts[pickVariant(isBold, isItalic)];
+  }
+
+  // For annotations (add text), use standard Helvetica
+  const defaultFont = await pdfDoc.embedFont(StandardFonts.Helvetica);
+
+  // Apply text edits with proper font matching
   if (textEdits && textEdits.size > 0) {
     for (const [, edit] of Array.from(textEdits.entries())) {
       const page = pages[edit.pageNum - 1];
       if (!page) continue;
 
-      // Resolve the font from the original text
-      const match = resolveFont(edit.fontFamily);
-      const font = await getFont(match.font);
+      const font = await getEditFont(edit.isBold, edit.isItalic);
 
       const padding = 2;
       // White-out the original text area
@@ -56,7 +84,7 @@ export async function exportPDF(
         color: rgb(1, 1, 1),
       });
 
-      // Draw the replacement text with the matched font
+      // Draw the replacement text with matched font variant
       page.drawText(edit.newText, {
         x: edit.pdfX,
         y: edit.pdfY,

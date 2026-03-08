@@ -24,6 +24,9 @@ export interface TextEdit {
   pdfHeight: number;
   fontSize: number;
   fontFamily: string;
+  fontName: string;
+  isBold: boolean;
+  isItalic: boolean;
 }
 
 export interface Point {

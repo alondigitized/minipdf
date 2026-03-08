@@ -20,6 +20,9 @@ export interface ExtractedTextItem {
   pdfHeight: number;
   fontSize: number;
   fontFamily: string;
+  fontName: string; // actual PDF font name e.g. "Helvetica-Bold"
+  isBold: boolean;
+  isItalic: boolean;
   // Position in canvas coordinates (top-left origin, scaled)
   canvasX: number;
   canvasY: number;
@@ -35,6 +38,27 @@ export async function extractTextItems(
   const page = await pdf.getPage(pageNum);
   const viewport = page.getViewport({ scale: 1 });
   const textContent = await page.getTextContent();
+
+  // Build font metadata from page.commonObjs (has real font name, bold, italic)
+  const fontMeta: Record<string, { name: string; bold: boolean; italic: boolean }> = {};
+  // Trigger font loading via operatorList so commonObjs are populated
+  await page.getOperatorList();
+  for (const item of textContent.items) {
+    if (!("fontName" in item) || fontMeta[item.fontName]) continue;
+    try {
+      const fontObj = (page as any).commonObjs.get(item.fontName);
+      if (fontObj) {
+        fontMeta[item.fontName] = {
+          name: fontObj.name || item.fontName,
+          bold: !!fontObj.bold,
+          italic: !!fontObj.italic,
+        };
+      }
+    } catch {
+      // Font not available in commonObjs
+    }
+  }
+
   const styles = textContent.styles as Record<
     string,
     { fontFamily: string; ascent?: number; descent?: number }
@@ -47,18 +71,16 @@ export async function extractTextItems(
     if (!("str" in item) || !item.str.trim()) continue;
 
     const tx = item.transform;
-    // transform = [scaleX, skewX, skewY, scaleY, translateX, translateY]
-    const fontSize = Math.abs(tx[3]); // scaleY ≈ font size
+    const fontSize = Math.abs(tx[3]);
     const pdfX = tx[4];
     const pdfY = tx[5];
     const pdfWidth = item.width;
     const pdfHeight = fontSize;
 
-    // Resolve font family from styles map (PDF.js internal name -> CSS family)
     const styleEntry = styles[item.fontName];
-    const fontFamily = styleEntry?.fontFamily || item.fontName || "Helvetica";
+    const fontFamily = styleEntry?.fontFamily || "sans-serif";
+    const meta = fontMeta[item.fontName];
 
-    // Convert to canvas coords (top-left origin, apply scale)
     const canvasX = pdfX * scale;
     const canvasY = (viewport.height - pdfY) * scale;
     const canvasWidth = pdfWidth * scale;
@@ -73,6 +95,9 @@ export async function extractTextItems(
       pdfHeight,
       fontSize,
       fontFamily,
+      fontName: meta?.name || "Helvetica",
+      isBold: meta?.bold || false,
+      isItalic: meta?.italic || false,
       canvasX,
       canvasY,
       canvasWidth,
