@@ -115,33 +115,39 @@ export default function TextEditLayer({
         const hasEdit = textEdits.has(item.id);
         const displayText = getCurrentText(item);
 
-        // Only show items when tool is active OR item has been edited
         if (!active && !hasEdit) return null;
+
+        const fontStyle: React.CSSProperties = {
+          fontSize: item.fontSize * scale,
+          lineHeight: 1,
+          fontFamily: "Helvetica, Arial, sans-serif",
+          fontWeight: item.isBold ? "bold" : "normal",
+          fontStyle: item.isItalic ? "italic" : "normal",
+        };
+
+        // Padding to fully cover original text on the canvas
+        const pad = 4;
 
         return (
           <div
             key={item.id}
             className="absolute"
             style={{
-              left: item.canvasX,
-              top: item.canvasY - item.canvasHeight,
-              width: Math.max(item.canvasWidth, 20),
-              height: item.canvasHeight + 2,
+              left: item.canvasX - pad,
+              top: item.canvasY - item.canvasHeight - pad,
+              width: Math.max(item.canvasWidth + pad * 2, 30),
+              height: item.canvasHeight + pad * 2,
             }}
           >
             {isEditing ? (
               <input
                 ref={inputRef}
-                className="w-full h-full border border-blue-500 outline-none px-0"
+                className="w-full h-full border border-blue-500 outline-none"
                 style={{
-                  fontSize: item.fontSize * scale,
-                  lineHeight: 1,
-                  fontFamily: "Helvetica, Arial, sans-serif",
-                  fontWeight: item.isBold ? "bold" : "normal",
-                  fontStyle: item.isItalic ? "italic" : "normal",
+                  ...fontStyle,
                   color: "#000",
-                  background: "transparent",
-                  minWidth: 40,
+                  background: "white",
+                  padding: `${pad}px`,
                 }}
                 defaultValue={displayText}
                 onBlur={(e) => handleCommit(item, e.target.value)}
@@ -154,39 +160,28 @@ export default function TextEditLayer({
                   }
                 }}
               />
-            ) : (
+            ) : hasEdit ? (
+              // Edited text: solid white background to fully cover original
               <div
-                className={`w-full h-full cursor-text transition-colors ${
-                  active
-                    ? "hover:bg-blue-500/10 hover:outline hover:outline-1 hover:outline-blue-400/50"
-                    : ""
-                } ${hasEdit ? "outline outline-1 outline-blue-400/30" : ""}`}
+                className="w-full h-full flex items-center cursor-text"
                 style={{
-                  fontSize: item.fontSize * scale,
-                  lineHeight: 1,
-                  fontFamily: "Helvetica, Arial, sans-serif",
-                  fontWeight: item.isBold ? "bold" : "normal",
-                  fontStyle: item.isItalic ? "italic" : "normal",
+                  ...fontStyle,
+                  color: "#000",
+                  background: "white",
+                  padding: `${pad}px`,
                 }}
                 onClick={() => handleItemClick(item)}
-                title={active ? "Click to edit" : undefined}
               >
-                {hasEdit && (
-                  <span
-                    className="absolute inset-0 flex items-center text-black px-0"
-                    style={{
-                      fontSize: item.fontSize * scale,
-                      lineHeight: 1,
-                      fontFamily: "Helvetica, Arial, sans-serif",
-                      fontWeight: item.isBold ? "bold" : "normal",
-                      fontStyle: item.isItalic ? "italic" : "normal",
-                      background: "white",
-                    }}
-                  >
-                    {displayText}
-                  </span>
-                )}
+                {displayText}
               </div>
+            ) : (
+              // Active tool: clickable hover target (transparent)
+              <div
+                className="w-full h-full cursor-text hover:bg-blue-500/10 hover:outline hover:outline-1 hover:outline-blue-400/50"
+                style={fontStyle}
+                onClick={() => handleItemClick(item)}
+                title="Click to edit"
+              />
             )}
           </div>
         );
