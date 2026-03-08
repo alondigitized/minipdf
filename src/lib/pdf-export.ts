@@ -199,15 +199,19 @@ export async function exportPDF(
   if (formFieldEdits && formFieldEdits.size > 0) {
     try {
       const form = pdfDoc.getForm();
+      // Embed Courier for form field appearance streams
+      const formFont = await pdfDoc.embedFont(StandardFonts.Courier);
+
       for (const [fieldName, edit] of Array.from(formFieldEdits.entries())) {
-        // Try as text field first, then checkbox — typed getters throw if wrong type
+        // Try as text field first, then checkbox
         if (edit.value !== undefined && edit.value !== "") {
           try {
             const tf = form.getTextField(fieldName);
+            tf.defaultUpdateAppearances(formFont);
             tf.setText(edit.value);
             continue;
-          } catch {
-            // Not a text field
+          } catch (e) {
+            console.warn(`[export] TextField "${fieldName}" failed:`, e);
           }
         }
         try {
@@ -217,18 +221,31 @@ export async function exportPDF(
           } else {
             cb.uncheck();
           }
+          continue;
         } catch {
-          // Not a checkbox either — try text field as fallback
-          try {
-            const tf = form.getTextField(fieldName);
-            tf.setText(edit.value || "");
-          } catch {
-            // Skip unsupported field types
-          }
+          // Not a checkbox
+        }
+        // Fallback: try text field even if value is empty
+        try {
+          const tf = form.getTextField(fieldName);
+          tf.defaultUpdateAppearances(formFont);
+          tf.setText(edit.value || "");
+        } catch (e) {
+          console.warn(`[export] Field "${fieldName}" unsupported:`, e);
         }
       }
-    } catch {
-      // PDF may not have a form
+
+      // Regenerate all field appearance streams with our embedded font
+      try {
+        form.updateFieldAppearances(formFont);
+      } catch {
+        // Some fields may not support appearance updates
+      }
+
+      // Flatten form so values are baked into the page content
+      form.flatten();
+    } catch (e) {
+      console.error("[export] Form field processing failed:", e);
     }
   }
 
