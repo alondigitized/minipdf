@@ -125,8 +125,11 @@ export default function TextEditLayer({
           fontStyle: item.isItalic ? "italic" : "normal",
         };
 
-        // Padding to fully cover original text on the canvas
-        const pad = 4;
+        // canvasY is the text baseline; CSS baseline sits ~85% down the line box
+        // Position so CSS text baseline aligns with the canvas baseline
+        const ascentRatio = 0.85;
+        const pad = 2; // small extra coverage around text
+        const textTop = item.canvasY - item.canvasHeight * ascentRatio;
 
         return (
           <div
@@ -134,7 +137,7 @@ export default function TextEditLayer({
             className="absolute"
             style={{
               left: item.canvasX - pad,
-              top: item.canvasY - item.canvasHeight - pad,
+              top: textTop - pad,
               width: Math.max(item.canvasWidth + pad * 2, 30),
               height: item.canvasHeight + pad * 2,
             }}
@@ -142,12 +145,13 @@ export default function TextEditLayer({
             {isEditing ? (
               <input
                 ref={inputRef}
-                className="w-full h-full border border-blue-500 outline-none"
+                className="w-full h-full outline outline-1 outline-blue-500"
                 style={{
                   ...fontStyle,
                   color: "#000",
                   background: "white",
                   padding: `${pad}px`,
+                  border: "none",
                 }}
                 defaultValue={displayText}
                 onBlur={(e) => handleCommit(item, e.target.value)}
@@ -163,7 +167,7 @@ export default function TextEditLayer({
             ) : hasEdit ? (
               // Edited text: solid white background to fully cover original
               <div
-                className="w-full h-full flex items-center cursor-text"
+                className="w-full h-full cursor-text"
                 style={{
                   ...fontStyle,
                   color: "#000",
