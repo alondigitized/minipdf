@@ -37,7 +37,8 @@ export default function Home() {
           alert("Invalid PDF file. The file content does not match PDF format.");
           return;
         }
-        setPdfData(e.target.result);
+        // Copy the buffer so pdfjs worker transfer can't detach it
+        setPdfData(e.target.result.slice(0));
       }
     };
     reader.readAsArrayBuffer(file);

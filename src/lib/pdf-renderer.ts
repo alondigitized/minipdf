@@ -77,8 +77,9 @@ export async function extractTextItems(
 
 export async function loadPDF(data: ArrayBuffer) {
   const lib = await ensureLib();
-  const pdf = await lib.getDocument({ data: new Uint8Array(data) })
-    .promise;
+  // Copy the data so the worker transfer doesn't detach the original buffer
+  const copy = new Uint8Array(data).slice();
+  const pdf = await lib.getDocument({ data: copy }).promise;
   return pdf;
 }
 
