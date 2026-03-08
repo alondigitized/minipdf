@@ -71,43 +71,43 @@ export default function FormFieldLayer({
         const current = getFieldValue(field);
 
         if (field.fieldType === "checkbox") {
+          const boxSize = Math.min(field.canvasWidth, field.canvasHeight);
           return (
             <div
               key={field.id}
-              className="absolute"
+              className="absolute cursor-pointer"
               style={{
                 left: field.canvasX,
                 top: field.canvasY,
                 width: field.canvasWidth,
                 height: field.canvasHeight,
               }}
-            >
-              <input
-                type="checkbox"
-                checked={current.isChecked}
-                disabled={field.readOnly}
-                onChange={(e) =>
-                  onFieldChange(field.fieldName, "", e.target.checked)
+              onClick={() => {
+                if (!field.readOnly) {
+                  onFieldChange(field.fieldName, "", !current.isChecked);
                 }
-                className="w-full h-full cursor-pointer accent-black"
-                style={{
-                  margin: 0,
-                  opacity: 0.01,
-                }}
-                title={field.fieldName}
-              />
-              {/* Visual checkmark overlay */}
+              }}
+              title={field.fieldName}
+            >
               {current.isChecked && (
                 <div
                   className="absolute inset-0 flex items-center justify-center pointer-events-none"
-                  style={{ fontSize: Math.min(field.canvasWidth, field.canvasHeight) * 0.8 }}
+                  style={{
+                    fontSize: boxSize * 0.9,
+                    fontWeight: 900,
+                    color: "#000",
+                    lineHeight: 1,
+                  }}
                 >
-                  &#10003;
+                  X
                 </div>
               )}
             </div>
           );
         }
+
+        // Text input: font fills ~80% of field height, vertically centered
+        const fieldFontSize = Math.max(field.canvasHeight * 0.75, 9);
 
         // Text input field
         return (
@@ -131,9 +131,9 @@ export default function FormFieldLayer({
                 }
                 className="w-full h-full bg-transparent outline-none resize-none"
                 style={{
-                  fontSize: Math.max(field.canvasHeight * 0.6, 8),
+                  fontSize: fieldFontSize,
                   lineHeight: 1.2,
-                  padding: "1px 2px",
+                  padding: `${(field.canvasHeight - fieldFontSize) / 2}px 2px`,
                   border: "none",
                   color: "#000",
                   fontFamily: "'Courier New', Courier, monospace",
@@ -151,12 +151,13 @@ export default function FormFieldLayer({
                 }
                 className="w-full h-full bg-transparent outline-none"
                 style={{
-                  fontSize: Math.max(field.canvasHeight * 0.6, 8),
+                  fontSize: fieldFontSize,
                   lineHeight: 1,
-                  padding: "1px 2px",
+                  padding: 0,
                   border: "none",
                   color: "#000",
                   fontFamily: "'Courier New', Courier, monospace",
+                  verticalAlign: "middle",
                 }}
                 title={field.fieldName}
               />
