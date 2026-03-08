@@ -13,8 +13,11 @@ export async function exportPDF(
   annotations: Map<number, Annotation[]>,
   scale: number,
   textEdits?: Map<string, TextEdit>
-): Promise<Uint8Array> {
-  const pdfDoc = await PDFDocument.load(new Uint8Array(originalData));
+): Promise<ArrayBuffer> {
+  const pdfDoc = await PDFDocument.load(new Uint8Array(originalData), {
+    ignoreEncryption: true,
+    updateMetadata: false,
+  });
   const font = await pdfDoc.embedFont(StandardFonts.Helvetica);
   const pages = pdfDoc.getPages();
 
@@ -133,5 +136,6 @@ export async function exportPDF(
     }
   }
 
-  return pdfDoc.save();
+  const saved = await pdfDoc.save();
+  return saved.buffer.slice(saved.byteOffset, saved.byteOffset + saved.byteLength) as ArrayBuffer;
 }

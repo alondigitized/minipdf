@@ -98,11 +98,8 @@ export default function PDFEditor({ pdfData, fileName, onReset }: PDFEditorProps
     if (!pdf) return;
     setExporting(true);
     try {
-      console.log("Export: pdfData byteLength =", pdfData.byteLength);
-      const bytes = await exportPDF(pdfData, editor.annotations, editor.scale, editor.textEdits);
-      console.log("Export: got bytes, length =", bytes.length);
-      const blob = new Blob([bytes.buffer], { type: "application/pdf" });
-      console.log("Export: blob size =", blob.size);
+      const buffer = await exportPDF(pdfData, editor.annotations, editor.scale, editor.textEdits);
+      const blob = new Blob([buffer], { type: "application/pdf" });
       const url = URL.createObjectURL(blob);
       const a = document.createElement("a");
       a.href = url;
@@ -111,10 +108,9 @@ export default function PDFEditor({ pdfData, fileName, onReset }: PDFEditorProps
       a.click();
       document.body.removeChild(a);
       setTimeout(() => URL.revokeObjectURL(url), 1000);
-    } catch (err: unknown) {
+    } catch (err) {
       console.error("Export failed:", err);
-      const msg = err instanceof Error ? err.message : String(err);
-      alert("Export failed: " + msg);
+      alert("Failed to export PDF. Please try again.");
     } finally {
       setExporting(false);
     }
