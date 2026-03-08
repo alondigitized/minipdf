@@ -149,7 +149,7 @@ export default function TextEditLayer({
                 style={{
                   ...fontStyle,
                   color: "#000",
-                  background: "white",
+                  background: "transparent",
                   padding: `${pad}px`,
                   border: "none",
                 }}
