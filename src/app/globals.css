@@ -1,0 +1,72 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --bg: #0a0a0a;
+  --fg: #ededed;
+}
+
+body {
+  background: var(--bg);
+  color: var(--fg);
+  font-family: system-ui, -apple-system, sans-serif;
+}
+
+/* Hide scrollbar for thumbnails */
+.hide-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+.hide-scrollbar {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+
+/* Canvas container */
+.pdf-page-container {
+  position: relative;
+  display: inline-block;
+  box-shadow: 0 4px 24px rgba(0, 0, 0, 0.4);
+  border-radius: 4px;
+  overflow: hidden;
+}
+
+.pdf-page-container canvas {
+  display: block;
+}
+
+/* Upload zone animation */
+.upload-zone {
+  transition: all 0.2s ease;
+}
+.upload-zone:hover {
+  border-color: #3b82f6;
+  background: rgba(59, 130, 246, 0.05);
+}
+.upload-zone.dragover {
+  border-color: #3b82f6;
+  background: rgba(59, 130, 246, 0.1);
+  transform: scale(1.01);
+}
+
+/* Toolbar buttons */
+.tool-btn {
+  @apply flex items-center justify-center w-10 h-10 rounded-lg transition-all duration-150;
+}
+.tool-btn:hover {
+  @apply bg-white/10;
+}
+.tool-btn.active {
+  @apply bg-blue-600 text-white shadow-lg shadow-blue-600/30;
+}
+
+/* Thumbnail */
+.thumbnail {
+  @apply border-2 border-transparent rounded cursor-pointer transition-all duration-150 opacity-70;
+}
+.thumbnail:hover {
+  @apply opacity-90 border-white/30;
+}
+.thumbnail.active {
+  @apply opacity-100 border-blue-500;
+}
