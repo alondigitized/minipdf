@@ -1,7 +1,7 @@
 import { PDFDocument, rgb, StandardFonts } from "pdf-lib";
 import type { PDFFont } from "pdf-lib";
 import fontkit from "@pdf-lib/fontkit";
-import type { Annotation, TextEdit, AnnotationFont } from "@/hooks/usePDFEditor";
+import type { Annotation, TextEdit, AnnotationFont, FormFieldEdit } from "@/hooks/usePDFEditor";
 
 function hexToRgb(hex: string) {
   const r = parseInt(hex.slice(1, 3), 16) / 255;
@@ -39,7 +39,7 @@ export async function exportPDF(
   annotations: Map<number, Annotation[]>,
   scale: number,
   textEdits?: Map<string, TextEdit>,
-  formFieldEdits?: Map<string, { value: string; isChecked: boolean }>
+  formFieldEdits?: Map<string, FormFieldEdit>
 ): Promise<ArrayBuffer> {
   const pdfDoc = await PDFDocument.load(new Uint8Array(originalData), {
     ignoreEncryption: true,
@@ -197,88 +197,91 @@ export async function exportPDF(
 
   // Apply form field edits
   if (formFieldEdits && formFieldEdits.size > 0) {
+    const formFont = await pdfDoc.embedFont(StandardFonts.Courier);
+    let formApiWorked = false;
+
+    // First, try pdf-lib form API (works for AcroForm PDFs)
     try {
       const form = pdfDoc.getForm();
-      const formFont = await pdfDoc.embedFont(StandardFonts.Courier);
-
-      // Build a lookup map: pdf-lib field name -> field object
-      // PDF.js uses XFA names like "topmostSubform[0].Page1[0].f1_14[0]"
-      // pdf-lib uses AcroForm names like "topmostSubform.Page1.f1_14"
       const pdfLibFields = form.getFields();
-      const fieldByName = new Map<string, string>(); // normalized -> actual pdf-lib name
-      for (const f of pdfLibFields) {
-        const name = f.getName();
-        fieldByName.set(name, name);
-        // Also index by stripped name (no array indices) and leaf name
-        const stripped = name.replace(/\[\d+\]/g, "");
-        fieldByName.set(stripped, name);
-        const leaf = name.split(".").pop() || name;
-        if (!fieldByName.has(leaf)) {
-          fieldByName.set(leaf, name);
-        }
-      }
 
-      // Resolve a PDF.js field name to a pdf-lib field name
-      const resolveFieldName = (pdjsName: string): string | null => {
-        // Direct match
-        if (fieldByName.has(pdjsName)) return fieldByName.get(pdjsName)!;
-        // Strip array indices: "topmostSubform[0].Page1[0].f1_14[0]" -> "topmostSubform.Page1.f1_14"
-        const stripped = pdjsName.replace(/\[\d+\]/g, "");
-        if (fieldByName.has(stripped)) return fieldByName.get(stripped)!;
-        // Try leaf name only: "f1_14"
-        const leaf = stripped.split(".").pop() || stripped;
-        if (fieldByName.has(leaf)) return fieldByName.get(leaf)!;
-        return null;
-      };
-
-      for (const [fieldName, edit] of Array.from(formFieldEdits.entries())) {
-        const resolvedName = resolveFieldName(fieldName);
-        if (!resolvedName) {
-          console.warn(`[export] No pdf-lib field found for "${fieldName}"`);
-          continue;
+      if (pdfLibFields.length > 0) {
+        const fieldByName = new Map<string, string>();
+        for (const f of pdfLibFields) {
+          const name = f.getName();
+          fieldByName.set(name, name);
+          fieldByName.set(name.replace(/\[\d+\]/g, ""), name);
+          const leaf = name.split(".").pop() || name;
+          if (!fieldByName.has(leaf)) fieldByName.set(leaf, name);
         }
 
-        // Try text field
-        if (edit.value !== undefined && edit.value !== "") {
+        const resolveFieldName = (pdjsName: string): string | null => {
+          if (fieldByName.has(pdjsName)) return fieldByName.get(pdjsName)!;
+          const stripped = pdjsName.replace(/\[\d+\]/g, "");
+          if (fieldByName.has(stripped)) return fieldByName.get(stripped)!;
+          const leaf = stripped.split(".").pop() || stripped;
+          if (fieldByName.has(leaf)) return fieldByName.get(leaf)!;
+          return null;
+        };
+
+        for (const [fieldName, edit] of Array.from(formFieldEdits.entries())) {
+          const resolved = resolveFieldName(fieldName);
+          if (!resolved) continue;
+          formApiWorked = true;
           try {
-            const tf = form.getTextField(resolvedName);
+            const tf = form.getTextField(resolved);
             tf.defaultUpdateAppearances(formFont);
-            tf.setText(edit.value);
+            tf.setText(edit.value || "");
             continue;
-          } catch {
-            // Not a text field
-          }
+          } catch { /* not text */ }
+          try {
+            const cb = form.getCheckBox(resolved);
+            if (edit.isChecked) cb.check(); else cb.uncheck();
+          } catch { /* skip */ }
         }
-        // Try checkbox
-        try {
-          const cb = form.getCheckBox(resolvedName);
-          if (edit.isChecked) {
-            cb.check();
-          } else {
-            cb.uncheck();
-          }
-          continue;
-        } catch {
-          // Not a checkbox
-        }
-        // Fallback: text field with empty or any value
-        try {
-          const tf = form.getTextField(resolvedName);
-          tf.defaultUpdateAppearances(formFont);
-          tf.setText(edit.value || "");
-        } catch {
-          // Skip unsupported field types
-        }
-      }
 
-      // Regenerate appearance streams
-      try {
-        form.updateFieldAppearances(formFont);
-      } catch {
-        // Some fields may not support appearance updates
+        if (formApiWorked) {
+          try { form.updateFieldAppearances(formFont); } catch { /* ok */ }
+        }
       }
-    } catch (e) {
-      console.error("[export] Form field processing failed:", e);
+    } catch { /* no form or XFA-only */ }
+
+    // Fallback: draw directly onto pages using stored canvas coordinates
+    // Handles XFA-only PDFs (like IRS forms) where pdf-lib has no AcroForm
+    if (!formApiWorked) {
+      for (const [, edit] of Array.from(formFieldEdits.entries())) {
+        const page = pages[edit.pageNum - 1];
+        if (!page) continue;
+        const { height: pageHeight } = page.getSize();
+
+        // Convert canvas coords to PDF coords
+        const pdfX = edit.canvasX / scale;
+        const pdfW = edit.canvasWidth / scale;
+        const pdfH = edit.canvasHeight / scale;
+        const pdfY = pageHeight - edit.canvasY / scale - pdfH;
+
+        if (edit.fieldType === "checkbox" && edit.isChecked) {
+          // Draw X for checked checkbox
+          const fontSize = pdfH * 0.85;
+          const xOffset = (pdfW - fontSize * 0.6) / 2;
+          page.drawText("X", {
+            x: pdfX + xOffset,
+            y: pdfY + pdfH * 0.15,
+            size: fontSize,
+            font: formFont,
+            color: rgb(0, 0, 0),
+          });
+        } else if (edit.fieldType === "text" && edit.value) {
+          const fontSize = Math.min(pdfH * 0.75, 12);
+          page.drawText(edit.value, {
+            x: pdfX + 1,
+            y: pdfY + pdfH * 0.2,
+            size: fontSize,
+            font: formFont,
+            color: rgb(0, 0, 0),
+          });
+        }
+      }
     }
   }
 

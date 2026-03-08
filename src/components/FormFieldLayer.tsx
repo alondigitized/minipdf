@@ -3,7 +3,7 @@
 import { useEffect, useState, useCallback, useRef } from "react";
 import type { PDFDocumentProxy } from "pdfjs-dist";
 import { extractFormFields, type FormField } from "@/lib/pdf-renderer";
-import type { ToolType } from "@/hooks/usePDFEditor";
+import type { ToolType, FormFieldEdit } from "@/hooks/usePDFEditor";
 
 interface FormFieldLayerProps {
   pdf: PDFDocumentProxy;
@@ -12,8 +12,8 @@ interface FormFieldLayerProps {
   width: number;
   height: number;
   tool: ToolType;
-  formFieldEdits: Map<string, { value: string; isChecked: boolean }>;
-  onFieldChange: (fieldName: string, value: string, isChecked: boolean) => void;
+  formFieldEdits: Map<string, FormFieldEdit>;
+  onFieldChange: (edit: FormFieldEdit & { fieldName: string }) => void;
 }
 
 export default function FormFieldLayer({
@@ -84,7 +84,17 @@ export default function FormFieldLayer({
               }}
               onClick={() => {
                 if (!field.readOnly) {
-                  onFieldChange(field.fieldName, "", !current.isChecked);
+                  onFieldChange({
+                    fieldName: field.fieldName,
+                    value: "",
+                    isChecked: !current.isChecked,
+                    canvasX: field.canvasX,
+                    canvasY: field.canvasY,
+                    canvasWidth: field.canvasWidth,
+                    canvasHeight: field.canvasHeight,
+                    pageNum: field.pageNum,
+                    fieldType: "checkbox",
+                  });
                 }
               }}
               title={field.fieldName}
@@ -129,7 +139,17 @@ export default function FormFieldLayer({
                 readOnly={field.readOnly}
                 maxLength={field.maxLen || undefined}
                 onChange={(e) =>
-                  onFieldChange(field.fieldName, e.target.value, false)
+                  onFieldChange({
+                    fieldName: field.fieldName,
+                    value: e.target.value,
+                    isChecked: false,
+                    canvasX: field.canvasX,
+                    canvasY: field.canvasY,
+                    canvasWidth: field.canvasWidth,
+                    canvasHeight: field.canvasHeight,
+                    pageNum: field.pageNum,
+                    fieldType: "text",
+                  })
                 }
                 className="bg-transparent outline-none resize-none"
                 style={{
@@ -152,7 +172,17 @@ export default function FormFieldLayer({
                 readOnly={field.readOnly}
                 maxLength={field.maxLen || undefined}
                 onChange={(e) =>
-                  onFieldChange(field.fieldName, e.target.value, false)
+                  onFieldChange({
+                    fieldName: field.fieldName,
+                    value: e.target.value,
+                    isChecked: false,
+                    canvasX: field.canvasX,
+                    canvasY: field.canvasY,
+                    canvasWidth: field.canvasWidth,
+                    canvasHeight: field.canvasHeight,
+                    pageNum: field.pageNum,
+                    fieldType: "text",
+                  })
                 }
                 className="bg-transparent outline-none"
                 style={{

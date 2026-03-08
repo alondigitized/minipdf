@@ -249,7 +249,7 @@ export default function PDFEditor({ pdfData, fileName, onReset }: PDFEditorProps
                 height={pageSize.height}
                 tool={editor.tool}
                 formFieldEdits={editor.formFieldEdits}
-                onFieldChange={editor.setFormFieldValue}
+                onFieldChange={(edit) => editor.setFormFieldValue(edit)}
               />
             )}
             {pageSize.width > 0 && pdf && (

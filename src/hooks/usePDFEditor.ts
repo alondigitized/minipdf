@@ -34,6 +34,18 @@ export interface Point {
   y: number;
 }
 
+export interface FormFieldEdit {
+  value: string;
+  isChecked: boolean;
+  // Canvas coordinates for direct-draw fallback
+  canvasX: number;
+  canvasY: number;
+  canvasWidth: number;
+  canvasHeight: number;
+  pageNum: number;
+  fieldType: "text" | "checkbox";
+}
+
 export type AnnotationFont = "helvetica" | "courier" | "times";
 
 export interface Annotation {
@@ -74,7 +86,7 @@ export function usePDFEditor() {
   const [textEdits, setTextEdits] = useState<Map<string, TextEdit>>(new Map());
   // Form field edits keyed by fieldName
   const [formFieldEdits, setFormFieldEdits] = useState<
-    Map<string, { value: string; isChecked: boolean }>
+    Map<string, FormFieldEdit>
   >(new Map());
 
   const getPageAnnotations = useCallback(
@@ -155,10 +167,10 @@ export function usePDFEditor() {
   );
 
   const setFormFieldValue = useCallback(
-    (fieldName: string, value: string, isChecked: boolean) => {
+    (edit: FormFieldEdit & { fieldName: string }) => {
       setFormFieldEdits((prev) => {
         const next = new Map(prev);
-        next.set(fieldName, { value, isChecked });
+        next.set(edit.fieldName, edit);
         return next;
       });
     },
