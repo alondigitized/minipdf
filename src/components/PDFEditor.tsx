@@ -99,13 +99,15 @@ export default function PDFEditor({ pdfData, fileName, onReset }: PDFEditorProps
     setExporting(true);
     try {
       const bytes = await exportPDF(pdfData, editor.annotations, editor.scale, editor.textEdits);
-      const blob = new Blob([bytes as unknown as BlobPart], { type: "application/pdf" });
+      const blob = new Blob([new Uint8Array(bytes)], { type: "application/pdf" });
       const url = URL.createObjectURL(blob);
       const a = document.createElement("a");
       a.href = url;
       a.download = fileName.replace(/\.pdf$/i, "") + "_edited.pdf";
+      document.body.appendChild(a);
       a.click();
-      URL.revokeObjectURL(url);
+      document.body.removeChild(a);
+      setTimeout(() => URL.revokeObjectURL(url), 1000);
     } catch (err) {
       console.error("Export failed:", err);
       alert("Failed to export PDF. Please try again.");
